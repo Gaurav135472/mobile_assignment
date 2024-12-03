@@ -1,78 +1,46 @@
-import { createClient } from 'redis';
-import express from 'express';
-import bodyParser from 'body-parser';
-
+// index.js
+const express = require('express');
 const app = express();
-const PORT = 3001;
+const cors = require('cors'); // To allow cross-origin requests
 
-// Initialize Redis Client
-let redisClient;
+// Enable CORS for all routes
+app.use(cors());
 
-(async () => {
-    try {
-        // Create Redis client
-        redisClient = createClient({
-            socket: {
-                host: 'redis-14513.c253.us-central1-1.gce.redislabs.com', // Replace with your Redis Cloud host
-                port: 14513 // Replace with your Redis Cloud port
-            },
-            password: 'your-redis-cloud-password' // Replace with your Redis Cloud password
-        });
+// Use JSON body parser middleware
+app.use(express.json());
 
-        // Connect to Redis
-        await redisClient.connect();
-        console.log('Connected to Redis Cloud!');
-    } catch (err) {
-        console.error('Failed to connect to Redis Cloud:', err);
-        process.exit(1); // Exit if Redis connection fails
-    }
-})();
+// Sample to-do list data (could be replaced with a database in real applications)
+let todoList = [
+    { id: 1, task: "Buy groceries", completed: false },
+    { id: 2, task: "Finish homework", completed: false },
+    { id: 3, task: "Clean the house", completed: true }
+];
 
-app.use(bodyParser.json());
-
-// Middleware to ensure Redis client is connected
-app.use((req, res, next) => {
-    if (!redisClient || !redisClient.isOpen) {
-        return res.status(500).json({ error: 'Redis client is not connected' });
-    }
-    next();
+// Endpoint to get the to-do list
+app.get('/get-todo', (req, res) => {
+    res.json(todoList); // Return the current to-do list
 });
 
-// Load TODO list
-app.get('/load', async (req, res) => {
-    try {
-        const todos = await redisClient.get('todo_items');
-        res.json(JSON.parse(todos) || []); // Return empty array if no items exist
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to load TODO items' });
-    }
+// Endpoint to add a new to-do item
+app.post('/add-todo', (req, res) => {
+    const { task } = req.body;
+    const newTask = {
+        id: todoList.length + 1,
+        task,
+        completed: false
+    };
+    todoList.push(newTask);
+    res.status(201).json(newTask); // Respond with the newly added task
 });
 
-// Save TODO list
-app.post('/save', async (req, res) => {
-    try {
-        const todos = req.body;
-        if (!Array.isArray(todos)) {
-            return res.status(400).json({ error: 'Invalid data format' });
-        }
-        await redisClient.set('todo_items', JSON.stringify(todos));
-        res.json({ status: 'save successful' });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to save TODO items' });
-    }
-});
+// Simulate real-time updates to the to-do list by randomly toggling completion status
+setInterval(() => {
+    const randomIndex = Math.floor(Math.random() * todoList.length);
+    todoList[randomIndex].completed = !todoList[randomIndex].completed;
+    console.log('Updated todo list:', todoList); // Logs the updated list to console
+}, 10000); // Every 10 seconds
 
-// Clear TODO list
-app.get('/clear', async (req, res) => {
-    try {
-        await redisClient.del('todo_items');
-        res.json({ status: 'clear successful' });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to clear TODO items' });
-    }
-});
-
-// Start the backend server
-app.listen(PORT, () => {
-    console.log(`Backend running on http://localhost:${PORT}`);
+// Start the server
+app.listen(3001, () => {
+    console.log('Server is running on http://localhost:3001');
 });
