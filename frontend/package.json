@@ -2,9 +2,9 @@
     "name": "todo-frontend",
     "version": "1.0.0",
     "description": "Frontend for the To-Do List application",
-    "main": "index.html",
+    "main": "App.js",
     "scripts": {
-      "start": "live-server --open=public"
+      "start": "live-server --open=App.js"
     },
     "devDependencies": {
       "live-server": "^1.2.1"
